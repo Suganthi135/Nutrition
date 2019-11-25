@@ -12,7 +12,7 @@ const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
 var fileupload=require("express-fileupload")
 app.use(fileupload());
-var str= "suganthi"
+
 
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
