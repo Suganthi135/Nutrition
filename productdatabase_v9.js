@@ -10,7 +10,9 @@ const passportJWT=require('passport-jwt')
 const JwtStrategy=passportJWT.Strategy;
 const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
-
+var fileupload=require("express-fileupload")
+app.use(fileupload());
+var str= "suganthi"
 
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -115,7 +117,7 @@ app.post('/insert/product',(req,res)=>{
   }catch(err){
     res.status(500).send({
 
-        message:Tokenexpire=Object.assign({},{"status":"Something went wrong..."})
+        message:err=Object.assign({},{"status":"Something went wrong..."})
     })
 
   }
@@ -134,7 +136,7 @@ app.get('/get/product',(req,res)=>{
   }catch(err){
     res.status(500).send({
 
-        message:Tokenexpire=Object.assign({},{"status":"Something went wrong..."})
+        message:err=Object.assign({},{"status":"Something went wrong..."})
     })
 
   }
@@ -157,7 +159,7 @@ app.put('/update/product',(req,res)=>{
   }catch(err){
     res.status(500).send({
 
-        message:Tokenexpire=Object.assign({},{"status":"Something went wrong..."})
+        message:err=Object.assign({},{"status":"Something went wrong..."})
     });
 
   }
@@ -166,8 +168,8 @@ app.put('/update/product',(req,res)=>{
 
 // Delete url for delete single and multiple document temporary
 app.delete('/delete/product',(req,res)=>{
-  /*if(!req.body.Product_Name){
-    return res.status(400).send('No fields');
+  /*if(!req.body.Product){
+    return res.status(500).send('No fields');
   }*/
   try{
       var get_request=req.body;
@@ -194,13 +196,29 @@ app.delete('/delete/product',(req,res)=>{
       });
       res.send({"Message":"Deleted successfully"})
   }catch(err){
-    res.status(500).send({
+           res.status(500).send("Can't read property")
 
-        message:Tokenexpire=Object.assign({},{"status":"Something went wrong..."})
-    });
 
   }
 });
+//Uploading Excel file
+/*app.post('/get_excel/product',(req,res)=>{
+  if(!req.files.Excel){
+    return res.status(500).send('No fields');
+  }
+  try{
+     var get_request=req.files;
+     console.log(get_request);
+     dbo.collection("Productcollection").insertOne(get_request, function(err, res) {
+        if (err) throw err;
+     });
+     res.send("File uploaded successfully")
+  }catch(err){
+     res.status(500).send("Can't read property")
+    });
+  }
+
+});*/
 });
 
 app.listen(3000);
