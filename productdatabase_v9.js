@@ -10,7 +10,7 @@ const passportJWT=require('passport-jwt')
 const JwtStrategy=passportJWT.Strategy;
 const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
-var a ="data"
+
 
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
