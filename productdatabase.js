@@ -14,6 +14,11 @@ var fileupload=require("express-fileupload")
 app.use(fileupload());
 
 
+var XLSX = require('xlsx');
+
+
+
+
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey:process.env.SECRET_OR_KEY
@@ -38,6 +43,7 @@ MongoClient.connect(url, function(err, db) {
 var currentDateTime;
 
 
+
 //Generating Token
 app.post('/generate_token/product',(req,res)=>{
    if(!req.body.Username || !req.body.Password){
@@ -45,19 +51,19 @@ app.post('/generate_token/product',(req,res)=>{
    }
   try{
   var get_request=req.body;
-  dbo.collection("Users").find1({"Username":get_request["Username"],"Password":get_request["Password"]}).toArray(function(err, result) {
+  dbo.collection("Users").find({"Username":get_request["Username"],"Password":get_request["Password"]}).toArray(function(err, result) {
      if (err) throw err;
      if (result.length!=0){
         const payload = { id:req.body.Username };
 
         const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
         var get_token={"Token":token}
-        /*
+
         result[0]["Token"]=get_token.Token
         console.log(result)
         dbo.collection("Tokencollection").insertMany(result,function(err, res) {
            if (err) throw err;
-         });   */
+         });
         res.send({"Token":token});
      } else{
        res.send("Invalid Username and Password")
@@ -69,18 +75,25 @@ app.post('/generate_token/product',(req,res)=>{
 });
 
 
-//Testing token is valid or invalid:
-app.post('/test_token/product',(req,res)=>{
-  const token = req.headers["x-access-token"] || req.headers["authorization"];
+//If token is valid send list of
+app.get('/test_token/product',(req,res)=>{
+  const token = req.headers;
   if (!token) return res.status(500).send("Access denied. No token provided.");
   //var get_token=req.body;
     try{
         var decoded = jwt.verify(token, process.env.SECRET_OR_KEY,function(err, decoded) {
             if (err) throw new Error(Tokenexpire)
+            if(Tokenexpire){
+              dbo.collection("Tokencollection").find({"Token":["Token"]}).toArray(function(err, result) {
+                    if (err) throw err;
+              });
+
+            }
 
             res.send(decoded)
         });
      }catch(Tokenexpire){
+
               res.status(500).send({
 
                   message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
@@ -91,14 +104,14 @@ app.post('/test_token/product',(req,res)=>{
 //Inserting data in database without duplicates
 app.post('/insert/product',(req,res)=>{
    if(!req.body.Product_Name){
-     return res.status(400).send('No fields');
+     return res.status(500).send('No fields');
    }
    try{
        var get_request;
        var get_request=req.body;
        dbo.collection("Productcollection").find({"User Id":get_request["User Id"]}).toArray(function(err, result) {
              if (err) throw err;
-             console.log('result aftr find',result);
+
              if (result.length!=0){
                res.send("already exist")
              } else {
@@ -197,28 +210,46 @@ app.delete('/delete/product',(req,res)=>{
       res.send({"Message":"Deleted successfully"})
   }catch(err){
            res.status(500).send("Can't read property")
-
-
   }
 });
 //Uploading Excel file
-/*app.post('/get_excel/product',(req,res)=>{
-  if(!req.files.Excel){
-    return res.status(500).send('No fields');
+app.post('/get_excel/product',(req,res)=>{
+  if(!req.files){
+    return res.status(500).send('No files were uploaded');
   }
   try{
-     var get_request=req.files;
-     console.log(get_request);
-     dbo.collection("Productcollection").insertOne(get_request, function(err, res) {
-        if (err) throw err;
-     });
-     res.send("File uploaded successfully")
-  }catch(err){
-     res.status(500).send("Can't read property")
-    });
-  }
+      var get_file=req.files;
+      var file=get_file['file']
+      var file_2=file['name']
+      var workbook = XLSX.readFile(file_2);
+      var sheet_name_list = workbook.SheetNames;
+      var xlData;
+      var xlData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
+      console.log("xlData info",xlData)
+      dbo.collection("Productcollection").find({"User_Id":xlData[0]["User_Id"]}).toArray(function(err, result) {
+            if (err) throw err;
+            console.log("result info",result)
+            if (result.length!=0){
+              res.send("already exist")
+            } else {
+                    var currentDateTime= new Date();
+                    var get_datetime={"datetime":currentDateTime}
+                    var status={isdeleted:"NO"}
+                    xlData[0]["datetime"]=get_datetime.datetime;
+                    xlData[0]["isdeleted"]=status.isdeleted
 
-});*/
+
+                    dbo.collection("Productcollection").insertMany(xlData, function(err, res) {
+                       if (err) throw err;
+
+                    });
+                     res.send("File uploaded successfully")
+            }
+        });
+  }catch(err){
+           res.status(500).send("Can't read property")
+  }
+});
 });
 
 app.listen(3000);
