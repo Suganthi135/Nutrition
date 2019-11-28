@@ -33,13 +33,9 @@ MongoClient.connect(url, function(err, db) {
     dbo.createCollection("Tokencollection", function(err, res) {
         if (err) throw err;
         console.log("Collection created!");
-        dbo.collection("Tokencollection").find({"Username":"Suganthi"},function(err, result) {
-          if (err) throw err;
-          console.log(result)
-        });
 
 
-     });
+    });
 var currentDateTime;
 
 /*function token(){
@@ -51,15 +47,6 @@ var currentDateTime;
 }
 var b=token();
 console.log(b)*/
-
-/*dbo.collection("Tokencollection").find({"Username":"Suganthi"},function(err, result) {
-   if (err) throw err;
- });
- console.log(result)*/
-
-
-
-
 
 //Generating Token
 app.post('/generate_token/product',(req,res)=>{
@@ -96,19 +83,26 @@ app.post('/generate_token/product',(req,res)=>{
 app.get('/test_token/product',(req,res)=>{
   const token = req.headers ;
   if (!token) return res.status(500).send("Access denied. No token provided.");
-  //console.log(token)
-    try{
-        var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
-            if (err) throw new Error(Tokenexpire)
+  console.log(token)
+  try{
+      var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
+          if (err) throw new Error(Tokenexpire)
 
-            res.send(decoded)
-        });
-     }catch(Tokenexpire){
+          res.send(decoded)
+      });
+   }catch(Tokenexpire){
+            res.status(500).send({
+
+                message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
+            })
+   }
+
+    /* }catch(Tokenexpire){
               res.status(500).send({
 
                   message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
               })
-     }
+     }*/
 });
 //Inserting data in database without duplicates
 app.post('/insert/product',(req,res)=>{
