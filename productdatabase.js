@@ -109,34 +109,53 @@ app.post('/insert/product',(req,res)=>{
    if(!req.body.Product_Name){
      return res.status(500).send('No fields');
    }
-   try{
-       var get_request;
-       var get_request=req.body;
-       dbo.collection("Productcollection").find({"User_Id":get_request["User_Id"]}).toArray(function(err, result) {
-             if (err) throw err;
+   var get_request=req.body;
+   const token = req.headers ;
+   dbo.collection("Tokencollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
+         if (err) throw err;
+         console.log(result)
+         var user_token=result[0]["Token"]
+         try{
+             var decoded = jwt.verify(user_token, process.env.SECRET_OR_KEY,function(err, decoded) {
+                 if (err) throw new Error(Tokenexpire)
 
-             if (result.length!=0){
-               res.send("already exist")
-             } else {
-               var currentDateTime= new Date();
-               var datetime={"datetime":currentDateTime};
-               var status={isdeleted:"NO"}
-               var insert_details= Object.assign({}, get_request,datetime,status);
-               console.log(insert_details);
-               dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
-                  if (err) throw err;
+                 try{
+                     var get_request;
+                     var get_request=req.body;
+                     dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
+                           if (err) throw err;
 
-               });
-               res.send({"Message":"Inserted successfully"})
-             }
-       });
-  }catch(err){
-    res.status(500).send({
+                           if (result.length!=0){
+                             res.send("already exist")
+                           } else {
+                             var currentDateTime= new Date();
+                             var datetime={"datetime":currentDateTime};
+                             var status={isdeleted:"NO"}
+                             var insert_details= Object.assign({}, get_request,datetime,status);
+                             console.log(insert_details);
+                             dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
+                                if (err) throw err;
 
-        message:err=Object.assign({},{"status":"Something went wrong..."})
-    })
+                             });
+                             res.send({"Message":"Inserted successfully"})
+                           }
+                     });
+                }catch(err){
+                  res.status(500).send({
 
-  }
+                      message:err=Object.assign({},{"status":"Something went wrong..."})
+                  })
+
+                }
+             });
+          }catch(Tokenexpire){
+                   res.status(500).send({
+
+                       message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
+                   })
+          }
+    });
+
 });
 
 //Sending data from database to client
@@ -254,8 +273,5 @@ app.post('/get_excel/product',(req,res)=>{
   }
 
 });
-
 });
-
-
 app.listen(3000);
