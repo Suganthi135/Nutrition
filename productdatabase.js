@@ -12,13 +12,7 @@ const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
 var fileupload=require("express-fileupload")
 app.use(fileupload());
-
-
 var XLSX = require('xlsx');
-
-
-
-
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey:process.env.SECRET_OR_KEY
@@ -39,8 +33,31 @@ MongoClient.connect(url, function(err, db) {
     dbo.createCollection("Tokencollection", function(err, res) {
         if (err) throw err;
         console.log("Collection created!");
+        dbo.collection("Tokencollection").find({"Username":"Suganthi"},function(err, result) {
+          if (err) throw err;
+          console.log(result)
+        });
+
+
      });
 var currentDateTime;
+
+/*function token(){
+  dbo.collection("Tokencollection").find({"Username":"Suganthi"},function(err, result) {
+     if (err) throw err;
+   });
+   var a=result
+   return result
+}
+var b=token();
+console.log(b)*/
+
+/*dbo.collection("Tokencollection").find({"Username":"Suganthi"},function(err, result) {
+   if (err) throw err;
+ });
+ console.log(result)*/
+
+
 
 
 
@@ -55,13 +72,13 @@ app.post('/generate_token/product',(req,res)=>{
      if (err) throw err;
      if (result.length!=0){
         const payload = { id:req.body.Username };
-
+        console.log(payload)
         const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
         var get_token={"Token":token}
 
-        result[0]["Token"]=get_token.Token
-        console.log(result)
-        dbo.collection("Tokencollection").insertMany(result,function(err, res) {
+
+        console.log(get_token)
+        dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
            if (err) throw err;
          });
         res.send({"Token":token});
@@ -77,30 +94,22 @@ app.post('/generate_token/product',(req,res)=>{
 
 //If token is valid send list of
 app.get('/test_token/product',(req,res)=>{
-  const token = req.headers;
+  const token = req.headers ;
   if (!token) return res.status(500).send("Access denied. No token provided.");
-  //var get_token=req.body;
+  //console.log(token)
     try{
-        var decoded = jwt.verify(token, process.env.SECRET_OR_KEY,function(err, decoded) {
+        var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
             if (err) throw new Error(Tokenexpire)
-            if(Tokenexpire){
-              dbo.collection("Tokencollection").find({"Token":["Token"]}).toArray(function(err, result) {
-                    if (err) throw err;
-              });
-
-            }
 
             res.send(decoded)
         });
      }catch(Tokenexpire){
-
               res.status(500).send({
 
                   message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
               })
      }
 });
-
 //Inserting data in database without duplicates
 app.post('/insert/product',(req,res)=>{
    if(!req.body.Product_Name){
@@ -109,7 +118,7 @@ app.post('/insert/product',(req,res)=>{
    try{
        var get_request;
        var get_request=req.body;
-       dbo.collection("Productcollection").find({"User Id":get_request["User Id"]}).toArray(function(err, result) {
+       dbo.collection("Productcollection").find({"User_Id":get_request["User_Id"]}).toArray(function(err, result) {
              if (err) throw err;
 
              if (result.length!=0){
@@ -249,7 +258,10 @@ app.post('/get_excel/product',(req,res)=>{
   }catch(err){
            res.status(500).send("Can't read property")
   }
+
 });
+
 });
+
 
 app.listen(3000);
