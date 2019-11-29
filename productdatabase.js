@@ -106,56 +106,70 @@ app.get('/test_token/product',(req,res)=>{
 });
 //Inserting data in database without duplicates
 app.post('/insert/product',(req,res)=>{
-   if(!req.body.Product_Name){
-     return res.status(500).send('No fields');
-   }
-   var get_request=req.body;
-   const token = req.headers ;
-   dbo.collection("Tokencollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
-         if (err) throw err;
-         console.log(result)
-         var user_token=result[0]["Token"]
-         try{
-             var decoded = jwt.verify(user_token, process.env.SECRET_OR_KEY,function(err, decoded) {
-                 if (err) throw new Error(Tokenexpire)
+  var get_request=req.body;
+  const token = req.headers ;
+  if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
 
-                 try{
-                     var get_request;
-                     var get_request=req.body;
-                     dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
-                           if (err) throw err;
+   //try{
+       /*dbo.collection("Tokencollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
+             if (err)  {
+               console.log(result)
+               res.send({"Message":"Invalidtoken"})
+             }else{*/
+             //console.log(result)
+             //var user_token=result[0]["Token"]
+             //try{
+                   var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
 
-                           if (result.length!=0){
-                             res.send("already exist")
-                           } else {
-                             var currentDateTime= new Date();
-                             var datetime={"datetime":currentDateTime};
-                             var status={isdeleted:"NO"}
-                             var insert_details= Object.assign({}, get_request,datetime,status);
-                             console.log(insert_details);
-                             dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
-                                if (err) throw err;
+                       if(err){
+                          dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
+                              if (err) throw err;
+                               res.send({"Message":"Tokenexpire. Invalidtoken"})
+                          });
+                       }else{
+                             try{
+                                 var get_request;
+                                 var get_request=req.body;
+                                 dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
+                                       if (err) throw err;
 
-                             });
-                             res.send({"Message":"Inserted successfully"})
-                           }
-                     });
-                }catch(err){
-                  res.status(500).send({
+                                       if (result.length!=0){
+                                         res.send("already exist")
+                                       } else {
+                                         var currentDateTime= new Date();
+                                         var datetime={"datetime":currentDateTime};
+                                         var status={isdeleted:"NO"}
+                                         var insert_details= Object.assign({}, get_request,datetime,status);
+                                         console.log(insert_details);
+                                         dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
+                                            if (err) throw err;
 
-                      message:err=Object.assign({},{"status":"Something went wrong..."})
-                  })
+                                         });
+                                         res.send({"Message":"Inserted successfully"})
+                                       }
 
-                }
-             });
-          }catch(Tokenexpire){
+                                 });
+                            }catch(err){
+                              res.status(500).send({
+
+                                  message:err=Object.assign({},{"status":"Something went wrong..."})
+                              })
+                            }
+
+                       }
+                   });
+        /*  }catch(Tokenexpire){
                    res.status(500).send({
 
                        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
                    })
-          }
+          }*/
+      //  }
     });
 
+  /* }catch(err){
+      res.status(500).send("Invalidtoken")
+   }*/
 });
 
 //Sending data from database to client
