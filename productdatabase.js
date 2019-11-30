@@ -38,16 +38,24 @@ MongoClient.connect(url, function(err, db) {
 
     });
 var currentDateTime;
-/*fuction Authenticate(Tk){
-  var decoded = jwt.verify(token["Tk"], process.env.SECRET_OR_KEY,function(err, decoded) {
 
-      if(err){
-         dbo.collection("Tokencollection").deleteOne({"Token":token["Tk"]}, function(err, obj) {
-             if (err) throw err;
-              res.send({"Message":"Tokenexpire. Invalidtoken"})
-         });
+//Function for token verification
+function tokenverification(token){
+      try{
+        var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
+            if (err) throw new Error(Tokenexpire)
+            console.log("decoded",decoded)
+        });
+        return 'passed'
 
-}*/
+     }catch(Tokenexpire){
+              dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
+                  if (err) throw err;
+              });
+              return 'not passed'
+
+     }
+ }
 
 
 //Generating Token
@@ -111,24 +119,7 @@ app.post('/insert/product',(req,res)=>{
   var get_request=req.body;
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
-
-   //try{
-       /*dbo.collection("Tokencollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
-             if (err)  {
-               console.log(result)
-               res.send({"Message":"Invalidtoken"})
-             }else{*/
-             //console.log(result)
-             //var user_token=result[0]["Token"]
-             //try{
-             var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
-
-                 if(err){
-                    dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
-                        if (err) throw err;
-                         res.send({"Message":"Tokenexpire. Invalidtoken"})
-                    });
-                 }else{
+                 if (tokenverification(token)=='passed'){
                        try{
                            var get_request;
                            var get_request=req.body;
@@ -145,33 +136,24 @@ app.post('/insert/product',(req,res)=>{
                                    console.log(insert_details);
                                    dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
                                       if (err) throw err;
-
                                    });
                                    res.send({"Message":"Inserted successfully"})
                                  }
-
                            });
                       }catch(err){
                         res.status(500).send({
-
                             message:err=Object.assign({},{"status":"Something went wrong..."})
                         })
                       }
+               }else {
+                 res.status(500).send({
 
-                       }
-                   });
-        /*  }catch(Tokenexpire){
-                   res.status(500).send({
+                     message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
+                 })
 
-                       message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
-                   })
-          }*/
-      //  }
+               }
 
 
-  /* }catch(err){
-      res.status(500).send("Invalidtoken")
-   }*/
 });
 
 //Sending data from database to client
