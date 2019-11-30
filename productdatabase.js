@@ -72,8 +72,6 @@ app.post('/generate_token/product',(req,res)=>{
         console.log(payload)
         const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
         var get_token={"Token":token}
-
-
         console.log(get_token)
         dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
            if (err) throw err;
@@ -102,83 +100,73 @@ app.get('/test_token/product',(req,res)=>{
       });
    }catch(Tokenexpire){
             res.status(500).send({
-
                 message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
             })
    }
 
-    /* }catch(Tokenexpire){
-              res.status(500).send({
-
-                  message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
-              })
-     }*/
 });
 //Inserting data in database without duplicates
 app.post('/insert/product',(req,res)=>{
   var get_request=req.body;
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
-                 if (tokenverification(token)=='passed'){
-                       try{
-                           var get_request;
-                           var get_request=req.body;
-                           dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
-                                 if (err) throw err;
+         if (tokenverification(token)=='passed'){
+               try{
+                   var get_request;
+                   var get_request=req.body;
+                   dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
+                         if (err) throw err;
 
-                                 if (result.length!=0){
-                                   res.send("already exist")
-                                 } else {
-                                   var currentDateTime= new Date();
-                                   var datetime={"datetime":currentDateTime};
-                                   var status={isdeleted:"NO"}
-                                   var insert_details= Object.assign({}, get_request,datetime,status);
-                                   console.log(insert_details);
-                                   dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
-                                      if (err) throw err;
-                                   });
-                                   res.send({"Message":"Inserted successfully"})
-                                 }
+                         if (result.length!=0){
+                           res.send("already exist")
+                         } else {
+                           var currentDateTime= new Date();
+                           var datetime={"datetime":currentDateTime};
+                           var status={isdeleted:"NO"}
+                           var insert_details= Object.assign({}, get_request,datetime,status);
+                           console.log(insert_details);
+                           dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
+                              if (err) throw err;
                            });
-                      }catch(err){
-                        res.status(500).send({
-                            message:err=Object.assign({},{"status":"Something went wrong..."})
-                        })
-                      }
-               }else {
-                 res.status(500).send({
+                           res.send({"Message":"Inserted successfully"})
+                         }
+                   });
+              }catch(err){
+                res.status(500).send({
+                    message:err=Object.assign({},{"status":"Something went wrong..."})
+                })
+              }
+       }else {
+         res.status(500).send({
+             message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
+         })
 
-                     message:Tokenexpire=Object.assign({},{"status":"Tokenexpire"})
-                 })
-
-               }
-
-
+       }
 });
 
 //Sending data from database to client
 app.get('/get/product',(req,res)=>{
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
-  try{
-    var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
+  if (tokenverification(token)=='passed'){
+        try{
 
-        if(err){
-           dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
-               if (err) throw err;
-                res.send({"Message":"Tokenexpire. Invalidtoken"})
-           });
-        }else{
-              dbo.collection("Productcollection").find({"isdeleted":"NO"}).toArray(function(err, result) {
-                    if (err) throw err;
-                    res.send({express: result})
-              });
-        }
-    });
-  }catch(err){
+            dbo.collection("Productcollection").find({"isdeleted":"NO"}).toArray(function(err, result) {
+                  if (err) throw err;
+                  res.send({express: result})
+            });
+
+
+      }catch(err){
+        res.status(500).send({
+
+            message:err=Object.assign({},{"status":"Something went wrong..."})
+        })
+
+      }
+  }else{
     res.status(500).send({
-
-        message:err=Object.assign({},{"status":"Something went wrong..."})
+        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
     })
 
   }
@@ -188,16 +176,7 @@ app.put('/update/product',(req,res)=>{
   var update_details=req.body;
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
-
-  try{
-      var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
-
-          if(err){
-             dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
-                 if (err) throw err;
-                  res.send({"Message":"Tokenexpire. Invalidtoken"})
-             });
-          }else{
+  if (tokenverification(token)=='passed'){
                try{
                    var need_to_update={$set:update_details,$currentDate:{"datetime":true}};
 
@@ -210,17 +189,16 @@ app.put('/update/product',(req,res)=>{
                    });
                    res.send({"Message":"Updated successfully"});
                 }catch(err){
-                  res.send("faild")
+                  res.send("Updated failure")
                 }
-         }
-      });
-  }catch(err){
+
+
+  }else{
     res.status(500).send({
+        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
+    })
 
-        message:err=Object.assign({},{"status":"Something went wrong..."})
-    });
-
-  }
+ }
 
 });
 
@@ -231,44 +209,42 @@ app.delete('/delete/product',(req,res)=>{
   }
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
+  if (tokenverification(token)=='passed'){
+       try{
+            var get_request=req.body;
+            var array_items=get_request["Product"]
+            var get_objectvalue;
+            array_items.forEach((element) => {
+              var get_objectvalue=element.Product_Name
+              dbo.collection("Productcollection").find( { "Product_Name":get_objectvalue}).toArray(function(err, result) {
+                  if (err) throw err;
+                  console.log(result)
+              var find_value= result[0]["Product_Name"];
+              if (get_objectvalue==find_value){
+                 var key_field={"Product_Name" :get_objectvalue,"isdeleted":"NO"}
+                 var need_to_change={$set:{isdeleted:"YES"}};
+                 if ({"isdeleted":"NO"}){
+                    dbo.collection("Productcollection").updateMany(key_field,need_to_change, function(err, res) {
+                        if (err) throw err;
+                    });
+                 }
+              }
+              console.log(get_objectvalue)
+              });
 
-  try{
-      var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
+            });
+            res.send({"Message":"Deleted successfully"})
 
-          if(err){
-             dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
-                 if (err) throw err;
-                  res.send({"Message":"Tokenexpire. Invalidtoken"})
-             });
-          }else{
-                var get_request=req.body;
-                var array_items=get_request["Product"]
-                var get_objectvalue;
-                array_items.forEach((element) => {
-                  var get_objectvalue=element.Product_Name
-                  dbo.collection("Productcollection").find( { "Product_Name":get_objectvalue}).toArray(function(err, result) {
-                      if (err) throw err;
-                      console.log(result)
-                  var find_value= result[0]["Product_Name"];
-                  if (get_objectvalue==find_value){
-                     var key_field={"Product_Name" :get_objectvalue,"isdeleted":"NO"}
-                     var need_to_change={$set:{isdeleted:"YES"}};
-                     if ({"isdeleted":"NO"}){
-                        dbo.collection("Productcollection").updateMany(key_field,need_to_change, function(err, res) {
-                            if (err) throw err;
-                        });
-                     }
-                  }
-                  console.log(get_objectvalue)
-                  });
 
-                });
-                res.send({"Message":"Deleted successfully"})
-            }
-      });
-  }catch(err){
-           res.status(500).send("Can't read property")
-  }
+      }catch(err){
+               res.status(500).send("Can't read property")
+      }
+  }else{
+    res.status(500).send({
+        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
+    })
+
+ }
 });
 //Uploading Excel file
 app.post('/get_excel/product',(req,res)=>{
@@ -277,51 +253,45 @@ app.post('/get_excel/product',(req,res)=>{
   }
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
+  if (tokenverification(token)=='passed'){
+      var get_file=req.files;
+      var file=get_file['file']
+      console.log(file)
+      var file_2=file['name']
+      var workbook = XLSX.readFile(file_2);
+      var sheet_name_list = workbook.SheetNames;
+      var xlData;
+      var xlData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
 
+      try{
+          dbo.collection("Productcollection").find({"Username":xlData[0]["Username"]}).toArray(function(err, result) {
+                if (err) throw err;
+                console.log("result info",result)
+                if (result.length!=0){
+                  res.send("already exist")
+                } else {
+                        var currentDateTime= new Date();
+                        var get_datetime={"datetime":currentDateTime}
+                        var status={isdeleted:"NO"}
+                        xlData[0]["datetime"]=get_datetime.datetime;
+                        xlData[0]["isdeleted"]=status.isdeleted
+                        dbo.collection("Productcollection").insertMany(xlData, function(err, res) {
+                           if (err) throw err;
 
-      var decoded = jwt.verify(token["token"], process.env.SECRET_OR_KEY,function(err, decoded) {
+                        });
+                         res.send("File uploaded successfully")
+               }
+           });
+         }catch(err){
+                  res.status(500).send("Can't read property")
+         }
+  }else{
+    res.status(500).send({
+        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
+    })
 
-          if(err){
-             dbo.collection("Tokencollection").deleteOne({"Token":token["token"]}, function(err, obj) {
-                 if (err) throw err;
-                  res.send({"Message":"Tokenexpire. Invalidtoken"})
-             });
-          }else{
-                var get_file=req.files;
-                var file=get_file['file']
-                console.log(file)
-                var file_2=file['name']
-                var workbook = XLSX.readFile(file_2);
-                var sheet_name_list = workbook.SheetNames;
-                var xlData;
-                var xlData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
+  }
 
-                try{
-                    dbo.collection("Productcollection").find({"Username":xlData[0]["Username"]}).toArray(function(err, result) {
-                          if (err) throw err;
-                          console.log("result info",result)
-                          if (result.length!=0){
-                            res.send("already exist")
-                          } else {
-                                  var currentDateTime= new Date();
-                                  var get_datetime={"datetime":currentDateTime}
-                                  var status={isdeleted:"NO"}
-                                  xlData[0]["datetime"]=get_datetime.datetime;
-                                  xlData[0]["isdeleted"]=status.isdeleted
-                                  dbo.collection("Productcollection").insertMany(xlData, function(err, res) {
-                                     if (err) throw err;
-
-                                  });
-                                   res.send("File uploaded successfully")
-                         }
-                     });
-                   }catch(err){
-                            res.status(500).send("Can't read property")
-                   }
-
-
-          }
-      });
 });
 });
 app.listen(3000);
