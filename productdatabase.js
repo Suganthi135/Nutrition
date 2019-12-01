@@ -11,7 +11,7 @@ const JwtStrategy=passportJWT.Strategy;
 const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
 var fileupload=require("express-fileupload")
-//var autenticate=required('./../productdatabase_v2');
+
 app.use(fileupload());
 var XLSX = require('xlsx');
 const opts={
@@ -64,23 +64,23 @@ app.post('/generate_token/product',(req,res)=>{
      return res.status(500).send('No fields');
    }
   try{
-  var get_request=req.body;
-  dbo.collection("Users").find({"Username":get_request["Username"],"Password":get_request["Password"]}).toArray(function(err, result) {
-     if (err) throw err;
-     if (result.length!=0){
-        const payload = { id:req.body.Username };
-        console.log(payload)
-        const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
-        var get_token={"Token":token}
-        console.log(get_token)
-        dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
-           if (err) throw err;
-         });
-        res.send({"Token":token});
-     } else{
-       res.send("Invalid Username and Password")
-     }
-   })
+      var get_request=req.body;
+      dbo.collection("Users").find({"Username":get_request["Username"],"Password":get_request["Password"]}).toArray(function(err, result) {
+         if (err) throw err;
+         if (result.length!=0){
+            const payload = { id:req.body.Username };
+            console.log(payload)
+            const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
+            var get_token={"Token":token}
+            console.log(get_token)
+            dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
+               if (err) throw err;
+             });
+            res.send({"Token":token});
+         } else{
+           res.send("Invalid Username and Password")
+         }
+       })
  }catch(err){
          res.status(500).send("Can't read property")
  }
@@ -120,8 +120,9 @@ app.post('/insert/product',(req,res)=>{
                          if (result.length!=0){
                            res.send("already exist")
                          } else {
-                           var currentDateTime= new Date();
-                           var datetime={"datetime":currentDateTime};
+
+
+                           var datetime={"datetime":Date()};
                            var status={isdeleted:"NO"}
                            var insert_details= Object.assign({}, get_request,datetime,status);
                            console.log(insert_details);
@@ -178,10 +179,10 @@ app.put('/update/product',(req,res)=>{
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
   if (tokenverification(token)=='passed'){
                try{
-                   var need_to_update={$set:update_details,$currentDate:{"datetime":true}};
 
+                   var update=Object.assign({},update_details,{"datetime":Date()})
+                   var need_to_update={$set:update};
                    var key_field={"Product_Name" :update_details["Product_Name"],"isdeleted":"NO"}
-                   console.log(key_field)
                    dbo.collection("Productcollection").updateMany(key_field,need_to_update, function(err, res) {
                      if (err) throw err;
                      console.log("update");
@@ -270,14 +271,12 @@ app.post('/get_excel/product',(req,res)=>{
                 if (result.length!=0){
                   res.send("already exist")
                 } else {
-                        var currentDateTime= new Date();
-                        var get_datetime={"datetime":currentDateTime}
+                        var get_datetime={"datetime":Date()}
                         var status={isdeleted:"NO"}
                         xlData[0]["datetime"]=get_datetime.datetime;
                         xlData[0]["isdeleted"]=status.isdeleted
                         dbo.collection("Productcollection").insertMany(xlData, function(err, res) {
                            if (err) throw err;
-
                         });
                          res.send("File uploaded successfully")
                }
