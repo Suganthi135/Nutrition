@@ -10,10 +10,12 @@ const passportJWT=require('passport-jwt')
 const JwtStrategy=passportJWT.Strategy;
 const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
+var crypto = require('crypto');
 var fileupload=require("express-fileupload")
-
 app.use(fileupload());
 var XLSX = require('xlsx');
+const Get_product = require('./getProduct.js');
+var Promise = require('promise');
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey:process.env.SECRET_OR_KEY
@@ -26,6 +28,7 @@ const strategy=new JwtStrategy(opts,(payload,next)=>{
 passport.use(strategy);
 app.use(passport.initialize());
 var MongoClient = require('mongodb').MongoClient;
+
 var url = "mongodb://localhost:27017/Nutritiondatabase";
 var dbo;
 MongoClient.connect(url, function(err, db) {
@@ -65,14 +68,21 @@ app.post('/generate_token/product',(req,res)=>{
    }
   try{
       var get_request=req.body;
-      dbo.collection("Users").find({"Username":get_request["Username"],"Password":get_request["Password"]}).toArray(function(err, result) {
+      var get_value=get_request["Password"]
+      var convert_string=String(get_value)
+      var hash_value=crypto.createHash('md5').update(convert_string).digest("hex");
+      console.log(hash_value)
+
+      dbo.collection("Users").find({"Username":get_request["Username"],"Password":hash_value}).toArray(function(err, result) {
          if (err) throw err;
+         console.log(result)
+
          if (result.length!=0){
             const payload = { id:req.body.Username };
-            console.log(payload)
+            //console.log(payload)
             const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
             var get_token={"Token":token}
-            console.log(get_token)
+            //console.log(get_token)
             dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
                if (err) throw err;
              });
@@ -116,20 +126,17 @@ app.post('/insert/product',(req,res)=>{
                    var get_request=req.body;
                    dbo.collection("Productcollection").find({"Username":get_request["Username"]}).toArray(function(err, result) {
                          if (err) throw err;
-
                          if (result.length!=0){
                            res.send("already exist")
                          } else {
-
-
-                           var datetime={"datetime":Date()};
-                           var status={isdeleted:"NO"}
-                           var insert_details= Object.assign({}, get_request,datetime,status);
-                           console.log(insert_details);
-                           dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
-                              if (err) throw err;
-                           });
-                           res.send({"Message":"Inserted successfully"})
+                             var datetime={"datetime":Date()};
+                             var status={isdeleted:"NO"}
+                             var insert_details= Object.assign({}, get_request,datetime,status);
+                             console.log(insert_details);
+                             dbo.collection("Productcollection").insertOne(insert_details, function(err, res) {
+                                if (err) throw err;
+                             });
+                             res.send({"Message":"Inserted successfully"})
                          }
                    });
               }catch(err){
@@ -149,34 +156,17 @@ app.post('/insert/product',(req,res)=>{
 app.get('/get/product',(req,res)=>{
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
-  if (tokenverification(token)=='passed'){
-        try{
-
-            dbo.collection("Productcollection").find({"isdeleted":"NO"}).toArray(function(err, result) {
-                  if (err) throw err;
-                  res.send({express: result})
-            });
+  var test_token=tokenverification(token)
+  new Get_product(token,dbo,res,test_token).generate_token()
 
 
-      }catch(err){
-        res.status(500).send({
-
-            message:err=Object.assign({},{"status":"Something went wrong..."})
-        })
-
-      }
-  }else{
-    res.status(500).send({
-        message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
-    })
-
-  }
 });
 //getting updated data and overwrite  in database
 app.put('/update/product',(req,res)=>{
   var update_details=req.body;
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
+
   if (tokenverification(token)=='passed'){
                try{
 
@@ -249,6 +239,7 @@ app.delete('/delete/product',(req,res)=>{
 });
 //Uploading Excel file
 app.post('/get_excel/product',(req,res)=>{
+  console.log("req",req)
   if(!req.files){
     return res.status(500).send('No files were uploaded');
   }
@@ -256,8 +247,9 @@ app.post('/get_excel/product',(req,res)=>{
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
   if (tokenverification(token)=='passed'){
       var get_file=req.files;
+      //console.log(get_file)
       var file=get_file['file']
-      console.log(file)
+
       var file_2=file['name']
       var workbook = XLSX.readFile(file_2);
       var sheet_name_list = workbook.SheetNames;
