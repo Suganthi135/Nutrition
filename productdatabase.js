@@ -10,11 +10,12 @@ const passportJWT=require('passport-jwt')
 const JwtStrategy=passportJWT.Strategy;
 const ExtractJwt=passportJWT.ExtractJwt;
 const jwt=require("jsonwebtoken");
-var crypto = require('crypto');
+var Cryptr = require('cryptr');
+cryptr=new Cryptr('ksffnh')
 var fileupload=require("express-fileupload")
 app.use(fileupload());
 var XLSX = require('xlsx');
-const Get_product = require('./getProduct.js');
+//const Get_product = require('./work_2.js');
 var Promise = require('promise');
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -59,8 +60,23 @@ function tokenverification(token){
 
      }
  }
+// Get Username Password
+app.post('/get_logindetails',(req,res)=>{
+   if(!req.body.Username || !req.body.Password){
+     return res.status(500).send('No fields');
+   }
+   var get_request=req.body;
+   var get_password=get_request["Password"]
+   str_password=String(get_password)
+   var encrystring=cryptr.encrypt(str_password)
+   dbo.collection("Users").insertOne({"Username":get_request["Username"],"Password":encrystring},function(err, res) {
+      if (err) throw err;
+
+  });
+   res.send("Stored successfully in mongodb")
 
 
+});
 //Generating Token
 app.post('/generate_token/product',(req,res)=>{
    if(!req.body.Username || !req.body.Password){
@@ -69,28 +85,33 @@ app.post('/generate_token/product',(req,res)=>{
   try{
       var get_request=req.body;
       var get_value=get_request["Password"]
-      var convert_string=String(get_value)
-      var hash_value=crypto.createHash('md5').update(convert_string).digest("hex");
-      console.log(hash_value)
-
-      dbo.collection("Users").find({"Username":get_request["Username"],"Password":hash_value}).toArray(function(err, result) {
+      console.log(get_value)
+      dbo.collection("Users").find({"Username":get_request["Username"]}).toArray(function(err, result) {
          if (err) throw err;
-         console.log(result)
+         var get_password=result[0]["Password"]
+         var decrystring=cryptr.decrypt(get_password)
+         console.log(decrystring)
 
-         if (result.length!=0){
-            const payload = { id:req.body.Username };
-            //console.log(payload)
-            const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
-            var get_token={"Token":token}
-            //console.log(get_token)
-            dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
-               if (err) throw err;
-             });
-            res.send({"Token":token});
-         } else{
-           res.send("Invalid Username and Password")
-         }
-       })
+          /*dbo.collection("Users").find({"Username":get_request["Username"],"Password":decrystring}).toArray(function(err, result) {
+             if (err) throw err;
+             console.log(result)
+
+             if (result.length!=0){*/
+             if (get_value==decrystring){
+                const payload = { id:req.body.Username };
+                //console.log(payload)
+                const token = jwt.sign(payload, process.env.SECRET_OR_KEY,{expiresIn:'2m'});
+                var get_token={"Token":token}
+                //console.log(get_token)
+                dbo.collection("Tokencollection").insertOne({"Username":get_request["Username"],"Token":token},function(err, res) {
+                   if (err) throw err;
+                 });
+                res.send({"Token":token});
+             } else{
+               res.send("Invalid Username and Password")
+             }
+           //})
+      })
  }catch(err){
          res.status(500).send("Can't read property")
  }
