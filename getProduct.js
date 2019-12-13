@@ -8,41 +8,35 @@ class Get_product{
     this.test_token=test_token;
 
   }
+
+  
   read_mongodb(){
     var a=this.dbo
-    function callback_mangdodb(a,callback){
-      a.collection("Productcollection").find({"isdeleted":"NO"}).toArray(function(err, result) {
-          if (err) throw err;
-          console.log("result",result)
+    var p1;
 
-      });
+    var p1=new Promise(function callback_mangdodb(resolve,reject){
+
+       // a.collection("Productcollection").find({"isdeleted":"NO"}).toArray(function(err, result) {
+       //    if (err) throw err;
+       resolve(1)
+          //var x=a
+          //console.log("result",1)
+     //});
+     p1.then(function(val){
       console.log("callback statrted")
-      callback();
 
-    }
+    })
+    callback_mangdodb(1)
 
-    function read_completed(){
-      console.log('Finished my homework');
-    }
-    callback_mangdodb(a,read_completed)
-
-
-  }
+  });
+ }
  generate_token(){
+         if (this.test_token!='passed'){
 
-      if (this.test_token!='passed'){
-            try{
                   this.read_mongodb()
-                  this.res.send({'message':'valid'})
+                  this.res.send({'message':"a"})
 
-            }catch(err){
-              console.log(err)
-              this.res.status(500).send({
 
-                  message:err=Object.assign({},{"status":"Something went wrong..."})
-              })
-
-            }
       }else{
         this.res.status(500).send({
             //message:Tokenexpire=Object.assign({},{"status":"Tokenexpire. Invalid"})
@@ -54,5 +48,6 @@ class Get_product{
 
 
   }//generate_token
+
 }//class
 module.exports=Get_product;

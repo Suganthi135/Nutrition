@@ -15,7 +15,7 @@ cryptr=new Cryptr('ksffnh')
 var fileupload=require("express-fileupload")
 app.use(fileupload());
 var XLSX = require('xlsx');
-//const Get_product = require('./work_2.js');
+const Get_product = require('./work_2.js');
 var Promise = require('promise');
 const opts={
   jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -178,7 +178,7 @@ app.get('/get/product',(req,res)=>{
   const token = req.headers ;
   if (!token["token"]) return res.status(500).send("Access denied. No token provided.");
   var test_token=tokenverification(token)
-  new Get_product(token,dbo,res,test_token).generate_token()
+  new Get_product(token,dbo,res,test_token).read_mongodb()
 
 
 });
